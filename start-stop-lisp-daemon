@@ -44,29 +44,40 @@ case "$1" in
                   $LISP_LOAD
     ;;
     'start-screen')
+	# start the instance of screen
+	SUDO="sudo -u $RUN_AS"
+	$SUDO screen -d -m -S $PROGNAME -t "emacs"
+	$SUDO screen -r $PROGNAME -p "emacs" -X chdir $ABROOT
+
+	# start up detachtty with our running lisp
         mkdir -p $VARROOT
         mkdir -p $LOGROOT
-	# start the instance of screen
-	sudo -u $RUN_AS screen -d -m -S $PROGNAME -t "detachtty"
-	# fire up a pure lisp image in detatchtty
-        touch $LOGROOT/$PROGNAME.dribble $LOGROOT/$PROGNAME.detachtty
+	touch $LOGROOT/$PROGNAME.dribble $LOGROOT/$PROGNAME.detachtty
 	chown $RUN_AS $LOGROOT $VARROOT
 	chown $RUN_AS $LOGROOT/$PROGNAME.dribble $LOGROOT/$PROGNAME.detachtty
-	start-stop-daemon --quiet -d $ABROOT --pidfile $VARROOT/$PROGNAME.pid --exec $DETACHTTY -u $RUN_AS --start \
-            -- --dribble-file $LOGROOT/$PROGNAME.dribble \
-            --log-file     $LOGROOT/$PROGNAME.detachtty \
-            --pid-file     $VARROOT/$PROGNAME.pid \
-            $VARROOT/$PROGNAME.socket \
-	    $LISP --eval \
-	    '(progn (let ((*debug-io* (make-broadcast-stream))) (cl:require :swank) (funcall (intern "CREATE-SERVER" :swank) :dont-close t :port '"$SWANKPORT)) $LISP_START_EXPRESSION)"$'\n'
+	export HOME=/home/$RUN_AS/
+        start-stop-daemon --quiet -d $ABROOT --pidfile $VARROOT/$PROGNAME.pid --exec $DETACHTTY -u $RUN_AS --start \
+         -- --dribble-file $LOGROOT/$PROGNAME.dribble \
+                  --log-file     $LOGROOT/$PROGNAME.detachtty \
+                  --pid-file     $VARROOT/$PROGNAME.pid \
+                  $VARROOT/$PROGNAME.socket \
+                  $LISP --eval '(let ((*debug-io* (make-broadcast-stream))) (cl:require :swank) (funcall (intern "CREATE-SERVER" :swank) :dont-close t :port '"$SWANKPORT))"
 
-	# use attachtty in screen to attach to the running process
-	[ -e $VARROOT/$PROGNAME.socket ] && tail -30 $LOGROOT/$PROGNAME.dribble
-	sudo -u $RUN_AS screen -r $PROGNAME -p "detachtty" -X stuff \
-            "attachtty $VARROOT/$PROGNAME.socket"$'\n'
-	sudo -u $RUN_AS screen -r $PROGNAME -X screen -t "attachtty"
-	sudo -u $RUN_AS screen -r $PROGNAME -p "attachtty" -X stuff \
-            "attachtty $VARROOT/$PROGNAME.socket"$'\n'
+	# now launch emacs in the screen session and attach to the new swank
+	$SUDO_AS screen -r $PROGNAME -p "emacs" -X stuff \
+	    "emacs -nw -eval \"(progn (sleep-for 1) (slime-connect \\\"127.0.0.1\\\" $SWANKPORT))\""$'\'n
+
+	# execute the start-up expression
+	#echo "$LISP_START_EXPRESSION" | attachtty $VARROOT/$PROGNAME.socket
+	
+	# start up our LISP
+	# LISP_EVAL_FORM='(progn (let ((*debug-io* (make-broadcast-stream))) (cl:require :swank) (funcall (intern "CREATE-SERVER" :swank) :dont-close t :port '"$SWANKPORT)) $LISP_START_EXPRESSION)"$'\n'
+	# $SUDO screen -r $PROGNAME -p "lisp" -X stuff \
+	#    "$LISP --eval \""'(let ((*debug-io* (make-broadcast-stream))) (cl:require :swank) (funcall (intern \"CREATE-SERVER\" :swank) :dont-close t :port '"$SWANKPORT))\""$'\n'
+
+	
+	#$SUDO screen -r $PROGNAME -p "lisp" -X stuff \
+	#    "$LISP_START_EXPRESSION"$'\r'
 
 	#LISP_EVAL="sudo -u $RUN_AS attachtty $VARROOT/$PROGNAME.socket --eval"
 	# make sure that you put in a new line character ($'\n') at the end
@@ -80,10 +91,6 @@ case "$1" in
 
 	#sudo -u $RUN_AS attachtty $VARROOT/$PROGNAME.socket         --eval $LISP_START_EXPRESSION
 	
-	# now launch emacs in the screen session and attach to the new swank
-	sudo -u $RUN_AS screen -r $PROGNAME -X screen -t "emacs"
-	#sudo -u $RUN_AS screen -r $PROGNAME -p "emacs" -X stuff \
-	#    "cd $ABROOT ; emacs -nw -eval \"(progn (sleep-for 5) (slime-connect \\\"127.0.0.1\\\" $SWANKPORT))\""$'\n'
     ;;
     'stop')
         attachtty $VARROOT/$PROGNAME.socket \
@@ -108,8 +115,8 @@ case "$1" in
     'attach')
         [ -e $VARROOT/$PROGNAME.socket ] && tail -30 $LOGROOT/$PROGNAME.dribble
         $SUDO attachtty $VARROOT/$PROGNAME.socket
-    ;;
-    *)
+    ;;  
+  *)
         echo "Usage: $0 lisp-image-name (start|stop|attach|swank|kill)"
 esac
 
