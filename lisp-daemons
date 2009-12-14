@@ -1,0 +1,65 @@
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          lisp-daemons
+# Required-Start:    $local_fs $remote_fs
+# Required-Stop:     $local_fs $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      S 0 1 6
+# Short-Description: Lisp daemons startup script
+# Description:       Starts lisp images defined in /etc/lisp-start.d/* via start-stop-lisp-image
+### END INIT INFO
+#
+# Author:	Andreas Fuchs <asf@boinkor.net>
+#
+
+set -e
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DESC="Lisp daemons"
+NAME=lisp-daemons
+DAEMON=/usr/local/bin/start-stop-lisp-daemon
+SCRIPTNAME=/etc/init.d/$NAME
+
+OP=$1; shift
+
+IMAGES=${@:-/etc/lisp-start.d/*}
+
+# Gracefully exit if the package has been removed.
+test -x $DAEMON || exit 0
+
+case "$OP" in
+  start)
+	echo -n "Starting $DESC: "
+	for i in $IMAGES; do
+		$DAEMON `basename "$i"` start
+	done
+	echo "."
+	;;
+  stop)
+	echo -n "Stopping $DESC: "
+	for i in $IMAGES; do
+		$DAEMON `basename "$i"` stop
+	done
+	echo "."
+	;;
+  swank)         
+        echo -n "Starting SWANK for $DESC: "
+        for i in $IMAGES; do
+                $DAEMON `basename "$i"` swank 
+        done   
+        echo "."
+        ;;
+  attach)
+	for i in $IMAGES; do     
+		echo "++++++++ $i +++++++++"
+                $DAEMON `basename "$i"` attach || /bin/true
+        done   
+	;;
+  *)
+	# echo "Usage: $SCRIPTNAME {start|stop|restart|reload|force-reload}" >&2
+	echo "Usage: $SCRIPTNAME {start|stop|swank|attach}" >&2
+	exit 1
+	;;
+esac
+
+exit 0

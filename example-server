@@ -1,0 +1,21 @@
+#!/bin/sh
+# The user to whom to switch before running the lisp image
+RUN_AS="red"
+
+# these paths must be absolute:
+# Base directory; we chdir to it before running the lisp
+ABROOT="/apps/iodb/server/"
+
+# Directory where detachtty places its pipe and pid file
+VARROOT=$ABROOT/+var
+
+# Directory where detachtty dribble output goes
+LOGROOT=$ABROOT/log
+
+# The command that we use to run the lisp.
+LISP=`which sbcl`
+LISP_START_EXPRESSION="(load \"start-daemon.lisp\")"
+LISP_QUIT_EXPRESSION="(load \"stop-daemon.lisp\")"
+
+# The port where we start swank on demand.
+SWANKPORT=7770
