@@ -13,7 +13,6 @@ VARROOT=$ABROOT/+var
 LOGROOT=$ABROOT/log
 
 # The command that we use to run the lisp.
-LISP=`which sbcl`
 LISP_START_EXPRESSION="(load \"start-daemon.lisp\")"
 LISP_QUIT_EXPRESSION="(load \"stop-daemon.lisp\")"
 

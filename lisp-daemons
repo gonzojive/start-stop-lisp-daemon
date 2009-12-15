@@ -31,14 +31,14 @@ case "$OP" in
   start)
 	echo -n "Starting $DESC: "
 	for i in $IMAGES; do
-		$DAEMON `basename "$i"` start
+		$DAEMON `basename "$i"` start || echo " failed to launch lisp daemon `basename $i`"
 	done
 	echo "."
 	;;
   stop)
 	echo -n "Stopping $DESC: "
 	for i in $IMAGES; do
-		$DAEMON `basename "$i"` stop
+		$DAEMON `basename "$i"` stop || echo " failed to stop lisp daemon `basename $i`"
 	done
 	echo "."
 	;;
