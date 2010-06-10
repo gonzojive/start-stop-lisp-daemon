@@ -1,0 +1,5 @@
+*~
+*.fasl
+*.o
+detachtty/attachtty
+detachtty/detachtty
